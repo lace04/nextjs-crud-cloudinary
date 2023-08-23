@@ -12,6 +12,15 @@ const nextConfig = {
 
 const millionConfig = {
   auto: true,
+  async redirects() {
+    return [
+      {
+        source: '/',
+        destination: '/products',
+        permanent: true,
+      },
+    ];
+  },
   // if you're using RSC:
   // auto: { rsc: true },
 };
