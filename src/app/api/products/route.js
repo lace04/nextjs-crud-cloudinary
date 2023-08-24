@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { dbConnect } from '@/libs/mysql';
+import cloudinary from '@/libs/cloudinary';
+import { unlink } from 'fs/promises';
+import { processImage } from '@/libs/processImage';
 
 export async function GET() {
   try {
@@ -12,12 +15,30 @@ export async function GET() {
 
 export async function POST(request) {
   try {
-    const { name, description, price } = await request.json();
+    const data = await request.formData();
+    const image = data.get('image');
+
+    if (!image) {
+      return NextResponse.json(
+        { message: 'No image uploaded' },
+        { status: 400 }
+      );
+    }
+
+    const filePatch = await processImage(image);
+
+    const res = await cloudinary.uploader.upload(filePatch);
+    // console.log(res.secure_url);
+
+    if (res) {
+      await unlink(filePatch);
+    }
 
     const result = await dbConnect.query(`INSERT INTO products SET ?`, {
-      name,
-      description,
-      price,
+      name: data.get('name'),
+      description: data.get('description'),
+      price: data.get('price'),
+      image: res.secure_url,
     });
 
     if (result.affectedRows === 0) {
@@ -25,9 +46,9 @@ export async function POST(request) {
     }
 
     return NextResponse.json({
-      name,
-      description,
-      price,
+      name: data.get('name'),
+      description: data.get('description'),
+      price: data.get('price'),
       id: result.insertId,
     });
   } catch (error) {
